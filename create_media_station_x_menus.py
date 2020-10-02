@@ -15,12 +15,12 @@ along with This software.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import json
-from collections import OrderedDict
+import subprocess
 
 from absl import app
 from absl import flags
 from absl import logging
-
+from collections import OrderedDict
 
 flags.DEFINE_string('movies_folder', None,
                     'Folder in which the movies served by the HTTP server '
@@ -31,6 +31,9 @@ flags.DEFINE_string('url_prefix', None,
                     'http://192.168.0.1/media/')
 
 flags.DEFINE_string('output_menu_file', None, 'Path to the JSON menu file')
+
+flags.DEFINE_boolean('create_thumbnails', True,
+                     'Whether thumbnails should be created for each movie')
 
 flags.mark_flag_as_required('movies_folder')
 flags.mark_flag_as_required('url_prefix')
@@ -48,6 +51,7 @@ flags.register_validator('output_menu_file',
 FLAGS = flags.FLAGS
 
 MENU_STRUCTURE = OrderedDict()
+FFMPEG_BINARY = '/usr/bin/ffmpeg'
 
 
 def printTree():
@@ -136,15 +140,38 @@ def createMoviesMenuEntries(root, folder):
             'action': ''.join(
                 ['video:', FLAGS.url_prefix, os.path.join(folder, filename)])
         }
-        if os.path.exists(os.path.join(root, folder, filename + '.jpg')):
+        imagefilename = filename[:-4] + '.jpg'
+        if os.path.exists(os.path.join(root, folder, imagefilename)):
             # To create the images run:
             # IFS=$(echo -en '\n\b'); for i in $(ls); do \
             # ffmpeg -i $i -ss '00:05:00.000' -vframes1 ${i}.jpg; done
             item['image'] = ''.join(
-                [FLAGS.url_prefix, os.path.join(folder, filename + '.jpg')])
+                [FLAGS.url_prefix, os.path.join(folder, imagefilename)])
             item['imageFiller'] = 'width-center'
         else:
-            item['icon'] = 'msx-white-soft:movie'
+            if FLAGS.create_thumbnails:
+                logging.info('Creating thumbnail for %s' % filename)
+                completed_process = None
+                try:
+                    completed_process = subprocess.run(
+                        [FFMPEG_BINARY,
+                         '-i', os.path.join(root, folder, filename),
+                         '-ss', '00:05:00.000', '-vframes', '1',
+                         os.path.join(root, folder, imagefilename)],
+                        capture_output=True)
+                except Exception as e:
+                    logging.exception(e)
+                finally:
+                    if completed_process and completed_process.returncode == 0:
+                        item['image'] = ''.join(
+                            [FLAGS.url_prefix,
+                             os.path.join(folder, imagefilename)])
+                        item['imageFiller'] = 'width-center'
+                    else:
+                        # Image couldn't be created
+                        item['icon'] = 'msx-white-soft:movie'
+            else:
+                item['icon'] = 'msx-white-soft:movie'
         items.append(item)
     return items
 
