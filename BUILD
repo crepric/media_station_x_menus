@@ -18,6 +18,7 @@ load("@rules_python//python:defs.bzl", "py_binary")
 py_binary(
     name = "create_media_station_x_menus",
     srcs = ["create_media_station_x_menus.py"],
+    python_version = "PY3",
     deps = [
         "@com_github_abseil_abseil_py//absl:app",
         "@com_github_abseil_abseil_py//absl/flags",
