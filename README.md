@@ -8,7 +8,9 @@ same server.
 
 This utility assumes that videos are stored in a collection of folders (max
 depth is 1). Each folder is expected to contain only video files and optionally
-pictures, with the same name filename + the extension (`.jpg`).
+pictures, with the same name filename + the extension (`.jpg`). If the JPG file
+does not exist, the utility will attempt to use `ffmpeg` to create one. You can
+disable this feature by specifying the flag: `--create_thumbnails=False`.
 
 The program checks the content of each folder, creating menu entries for each
 and items representing each file. If there is a `.jpg` file, it will be used
